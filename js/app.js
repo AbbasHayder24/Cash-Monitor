@@ -1,9 +1,10 @@
 /* ==========================================================================
-   FinFlow — Core Interactive Application Controller (Customizable Edition)
+   FinFlow — Core Interactive Application Controller (With Debts & Installments)
    ========================================================================== */
 
 (function () {
   let state = StorageManager.load();
+  if (!Array.isArray(state.debts)) state.debts = [];
   let activePeriod = "all"; // "all" or "YYYY-MM"
   let toastTimer = null;
 
@@ -11,7 +12,6 @@
   function syncBuiltinCurrencies() {
     let changed = false;
 
-    // 1. Remove old built-in currencies (EUR, GBP, SAR, AED) while keeping user-added custom ones
     Object.keys(state.currencies || {}).forEach((code) => {
       if (state.currencies[code] && state.currencies[code].builtin && !APP_CONFIG.defaultCurrencies[code]) {
         delete state.currencies[code];
@@ -20,7 +20,6 @@
       }
     });
 
-    // 2. Refresh active built-in currency metadata (e.g. IQD -> "ألف د.ع", decimals: 2, presets: [10, 50])
     Object.keys(APP_CONFIG.defaultCurrencies).forEach((code) => {
       const targetMeta = APP_CONFIG.defaultCurrencies[code];
       const currentMeta = state.currencies[code];
@@ -35,7 +34,6 @@
       }
     });
 
-    // 3. Auto-convert legacy full-dinar rate (e.g. 1310 -> 1.31, 1500 -> 1.5) to thousands unit
     if (typeof state.rates.IQD === "number" && state.rates.IQD >= 100) {
       state.rates.IQD = Number((state.rates.IQD / 1000).toFixed(4));
       changed = true;
@@ -76,6 +74,11 @@
 
   function formatMoney(amountUSD) {
     return CurrencyEngine.format(amountUSD, state.currency, state.rates, state.lang, state.currencies);
+  }
+
+  function getActiveSymbol() {
+    const meta = CurrencyEngine.getMeta(state.currency, state.currencies);
+    return state.lang === "ar" ? (meta.symbolAr || state.currency) : (meta.symbolEn || state.currency);
   }
 
   function toLocalInputVal(amountUSD) {
@@ -248,9 +251,10 @@
     });
 
     const dict = I18N[state.lang] || I18N.ar;
-    const activeMeta = CurrencyEngine.getMeta(state.currency, state.currencies);
-    const activeSym = state.lang === "ar" ? (activeMeta.symbolAr || state.currency) : (activeMeta.symbolEn || state.currency);
+    const activeSym = getActiveSymbol();
     document.getElementById("quickAmountLabel").textContent = `${dict.amount} (${activeSym})`;
+    const debtTotalLbl = document.getElementById("debtTotalLabel");
+    if (debtTotalLbl) debtTotalLbl.textContent = `${dict.debtTotalLabel} (${activeSym})`;
   }
 
   /* ---------- Metrics Computation ---------- */
@@ -495,7 +499,123 @@
       .join("");
   }
 
-  /* ---------- Tab 5: Editable Income Split Rule ---------- */
+  /* ---------- Tab 5: Debts & Installments ---------- */
+  function renderDebts() {
+    const dict = I18N[state.lang] || I18N.ar;
+    const list = state.debts || [];
+
+    // Summary totals
+    let oweRemainingUSD = 0;
+    let owedRemainingUSD = 0;
+    let activeInstallmentsUSD = 0;
+
+    list.forEach((d) => {
+      const rem = Math.max(0, (d.totalUSD || 0) - (d.paidUSD || 0));
+      if (d.kind === "owed") {
+        owedRemainingUSD += rem;
+      } else {
+        oweRemainingUSD += rem;
+        if (rem > 0.0001 && d.installmentUSD > 0) {
+          activeInstallmentsUSD += Math.min(rem, d.installmentUSD);
+        }
+      }
+    });
+
+    document.getElementById("debtTotalOwe").textContent = formatMoney(oweRemainingUSD);
+    document.getElementById("debtTotalOwed").textContent = formatMoney(owedRemainingUSD);
+    document.getElementById("debtTotalInstallments").textContent = formatMoney(activeInstallmentsUSD);
+
+    const filter = document.getElementById("debtFilterSelect").value || "all";
+    const filtered = list.filter((d) => {
+      const rem = Math.max(0, (d.totalUSD || 0) - (d.paidUSD || 0));
+      const settled = rem <= 0.0001;
+      if (filter === "settled") return settled;
+      if (filter === "all") return true;
+      return d.kind === filter;
+    });
+
+    const grid = document.getElementById("debtsGrid");
+    if (filtered.length === 0) {
+      grid.innerHTML = `<p class="muted-text">${dict.noDebtsYet}</p>`;
+      return;
+    }
+
+    grid.innerHTML = filtered
+      .map((d) => {
+        const total = d.totalUSD || 0;
+        const paid = Math.min(total, Math.max(0, d.paidUSD || 0));
+        const rem = Math.max(0, total - paid);
+        const settled = rem <= 0.0001;
+        const pct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
+
+        const kindMap = {
+          owe: { label: dict.debtKindOwe, cls: "debt-badge-owe" },
+          owed: { label: dict.debtKindOwed, cls: "debt-badge-owed" },
+          installment: { label: dict.debtKindInstallment, cls: "debt-badge-installment" }
+        };
+        const km = kindMap[d.kind] || kindMap.owe;
+        const barClass = settled ? "status-safe" : d.kind === "owed" ? "status-safe" : "status-warn";
+
+        const instCountLeft = !settled && d.installmentUSD > 0 ? Math.ceil(rem / d.installmentUSD) : 0;
+        const payInstBtn =
+          !settled && d.installmentUSD > 0
+            ? `<button type="button" class="chip-btn" data-pay-inst="${d.id}">${dict.debtPayInstBtn} (${formatMoney(Math.min(rem, d.installmentUSD))})</button>`
+            : "";
+        const settleAllBtn = !settled
+          ? `<button type="button" class="chip-btn" data-settle-debt="${d.id}">${dict.debtSettleAllBtn}</button>`
+          : "";
+
+        return `
+          <article class="budget-card">
+            <div class="budget-top">
+              <div class="chip-row">
+                <span class="cat-pill ${km.cls}">${km.label}</span>
+                ${settled ? `<span class="cat-pill debt-badge-settled">${dict.debtSettledBadge}</span>` : ""}
+              </div>
+              <div class="row-actions">
+                <button type="button" class="edit-btn" data-edit-debt="${d.id}" title="${dict.editBtn}">✎</button>
+                <button type="button" class="del-btn" data-delete-debt="${d.id}" title="${dict.deleteBtn}">✕</button>
+              </div>
+            </div>
+
+            <h3 class="classical-heading" style="font-size:1.08rem;">${escapeHTML(d.title)}</h3>
+            ${d.note ? `<div class="tx-note-preview">${escapeHTML(d.note)}</div>` : ""}
+
+            <div class="progress-track">
+              <div class="progress-fill ${barClass}" style="width:${pct}%"></div>
+            </div>
+
+            <div class="budget-top tx-sub classical-num">
+              <span>${dict.debtPaidShort} <strong>${formatMoney(paid)}</strong> (${pct}%)</span>
+              <span>${dict.debtRemainingShort} <strong>${formatMoney(rem)}</strong></span>
+            </div>
+            <div class="budget-top tx-sub classical-num">
+              <span>${dict.debtTotalShort} <strong>${formatMoney(total)}</strong></span>
+              ${d.dueDate ? `<span>${dict.debtDuePrefix} <strong>${escapeHTML(d.dueDate)}</strong></span>` : ""}
+            </div>
+            ${
+              instCountLeft > 0
+                ? `<div class="tx-sub classical-num">${dict.debtInstShort}: <strong>${formatMoney(d.installmentUSD)}</strong> • ${dict.debtInstRemaining} <strong>${instCountLeft}</strong></div>`
+                : ""
+            }
+
+            <div class="goal-quick-actions">
+              ${payInstBtn}
+              ${settleAllBtn}
+            </div>
+
+            <div class="budget-limit-editor">
+              <input type="number" step="any" min="0.01" placeholder="${dict.customDepositPlaceholder}" data-custom-debt-input="${d.id}" />
+              <button type="button" class="chip-btn" data-custom-debt-btn="${d.id}" data-debt-op="add">${dict.debtPayBtn}</button>
+              <button type="button" class="chip-btn chip-withdraw" data-custom-debt-btn="${d.id}" data-debt-op="sub">${dict.debtUndoBtn}</button>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+  }
+
+  /* ---------- Tab 6: Editable Income Split Rule ---------- */
   function renderRuleSplit(metrics) {
     const dict = I18N[state.lang] || I18N.ar;
     const split = state.settings.ruleSplit || { needs: 50, wants: 30, savings: 20 };
@@ -588,7 +708,7 @@
     badge.style.color = sum === 100 ? "var(--emerald)" : "var(--crimson)";
   }
 
-  /* ---------- Tab 6: Customize Studio ---------- */
+  /* ---------- Tab 7: Customize Studio ---------- */
   function renderCustomizeTab() {
     const dict = I18N[state.lang] || I18N.ar;
 
@@ -670,6 +790,7 @@
     renderTransactionsTable();
     renderBudgets(metrics);
     renderSavingsGoals();
+    renderDebts();
     renderRuleSplit(metrics);
     renderCustomizeTab();
   }
@@ -710,8 +831,7 @@
     const tx = state.transactions.find((t) => t.id === txId);
     if (!tx) return;
     const dict = I18N[state.lang] || I18N.ar;
-    const activeMeta = CurrencyEngine.getMeta(state.currency, state.currencies);
-    const activeSym = state.lang === "ar" ? (activeMeta.symbolAr || state.currency) : (activeMeta.symbolEn || state.currency);
+    const activeSym = getActiveSymbol();
     document.getElementById("editTxId").value = tx.id;
     document.getElementById("editTxType").value = tx.type;
     document.getElementById("editTxDate").value = tx.date;
@@ -727,8 +847,7 @@
     const goal = state.goals.find((g) => g.id === goalId);
     if (!goal) return;
     const dict = I18N[state.lang] || I18N.ar;
-    const activeMeta = CurrencyEngine.getMeta(state.currency, state.currencies);
-    const activeSym = state.lang === "ar" ? (activeMeta.symbolAr || state.currency) : (activeMeta.symbolEn || state.currency);
+    const activeSym = getActiveSymbol();
     document.getElementById("editGoalId").value = goal.id;
     document.getElementById("editGoalName").value = goal.name;
     document.getElementById("editGoalTarget").value = toLocalInputVal(goal.targetUSD);
@@ -736,6 +855,25 @@
     document.getElementById("editGoalTargetLabel").textContent = `${dict.targetAmount} (${activeSym})`;
     document.getElementById("editGoalSavedLabel").textContent = `${dict.currentSavedLabel} (${activeSym})`;
     document.getElementById("editGoalModal").classList.remove("hidden");
+  }
+
+  function openEditDebtModal(debtId) {
+    const d = (state.debts || []).find((x) => x.id === debtId);
+    if (!d) return;
+    const dict = I18N[state.lang] || I18N.ar;
+    const activeSym = getActiveSymbol();
+    document.getElementById("editDebtId").value = d.id;
+    document.getElementById("editDebtKind").value = d.kind || "owe";
+    document.getElementById("editDebtDue").value = d.dueDate || "";
+    document.getElementById("editDebtTitle").value = d.title || "";
+    document.getElementById("editDebtTotal").value = toLocalInputVal(d.totalUSD || 0);
+    document.getElementById("editDebtPaid").value = toLocalInputVal(d.paidUSD || 0);
+    document.getElementById("editDebtInst").value = d.installmentUSD > 0 ? toLocalInputVal(d.installmentUSD) : "";
+    document.getElementById("editDebtNote").value = d.note || "";
+    document.getElementById("editDebtTotalLabel").textContent = `${dict.debtTotalLabel} (${activeSym})`;
+    document.getElementById("editDebtPaidLabel").textContent = `${dict.debtPaidShort} (${activeSym})`;
+    document.getElementById("editDebtInstLabel").textContent = `${dict.debtInstShort} (${activeSym})`;
+    document.getElementById("editDebtModal").classList.remove("hidden");
   }
 
   function openEditCatModal(catId) {
@@ -751,7 +889,7 @@
     document.getElementById("editCatModal").classList.remove("hidden");
   }
 
-  /* ---------- Inline Two-Tap Confirmation Helper (Works in WebViews & Spck Editor) ---------- */
+  /* ---------- Inline Two-Tap Confirmation Helper ---------- */
   function requireInlineConfirm(buttonEl) {
     if (buttonEl.dataset.confirmArmed === "true") {
       buttonEl.dataset.confirmArmed = "false";
@@ -879,6 +1017,57 @@
     ["txSearchInput", "txTypeFilter", "txCategoryFilter", "txMonthFilter"].forEach((id) => {
       document.getElementById(id).addEventListener("input", renderTransactionsTable);
       document.getElementById(id).addEventListener("change", renderTransactionsTable);
+    });
+
+    document.getElementById("debtFilterSelect").addEventListener("change", renderDebts);
+
+    document.getElementById("newDebtForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const kind = document.getElementById("debtKindInput").value;
+      const title = document.getElementById("debtTitleInput").value.trim();
+      const totalLocal = parseFloat(document.getElementById("debtTotalInput").value);
+      const paidLocal = parseFloat(document.getElementById("debtPaidInput").value) || 0;
+      const instLocal = parseFloat(document.getElementById("debtInstInput").value) || 0;
+      const dueDate = document.getElementById("debtDueInput").value || "";
+      const note = document.getElementById("debtNoteInput").value.trim();
+
+      if (!title || isNaN(totalLocal) || totalLocal <= 0) return;
+
+      state.debts.unshift({
+        id: "debt-" + Date.now(),
+        kind,
+        title,
+        totalUSD: CurrencyEngine.toUSD(totalLocal, state.currency, state.rates),
+        paidUSD: CurrencyEngine.toUSD(Math.max(0, paidLocal), state.currency, state.rates),
+        installmentUSD: instLocal > 0 ? CurrencyEngine.toUSD(instLocal, state.currency, state.rates) : 0,
+        dueDate,
+        note
+      });
+
+      e.target.reset();
+      document.getElementById("debtPaidInput").value = "0";
+      persistAndRender("toastAdded");
+    });
+
+    document.getElementById("editDebtForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const id = document.getElementById("editDebtId").value;
+      const d = (state.debts || []).find((x) => x.id === id);
+      const totalLocal = parseFloat(document.getElementById("editDebtTotal").value);
+      const paidLocal = parseFloat(document.getElementById("editDebtPaid").value);
+      const instLocal = parseFloat(document.getElementById("editDebtInst").value) || 0;
+      if (!d || isNaN(totalLocal) || totalLocal <= 0 || isNaN(paidLocal) || paidLocal < 0) return;
+
+      d.kind = document.getElementById("editDebtKind").value;
+      d.dueDate = document.getElementById("editDebtDue").value || "";
+      d.title = document.getElementById("editDebtTitle").value.trim();
+      d.totalUSD = CurrencyEngine.toUSD(totalLocal, state.currency, state.rates);
+      d.paidUSD = CurrencyEngine.toUSD(Math.max(0, paidLocal), state.currency, state.rates);
+      d.installmentUSD = instLocal > 0 ? CurrencyEngine.toUSD(instLocal, state.currency, state.rates) : 0;
+      d.note = document.getElementById("editDebtNote").value.trim();
+
+      document.getElementById("editDebtModal").classList.add("hidden");
+      persistAndRender("toastSaved");
     });
 
     document.getElementById("editTxType").addEventListener("change", (e) => {
@@ -1168,6 +1357,54 @@
       const delGoalId = target.getAttribute("data-delete-goal");
       if (delGoalId) {
         state.goals = state.goals.filter((g) => g.id !== delGoalId);
+        persistAndRender("toastDeleted");
+        return;
+      }
+
+      // Debts & Installments actions
+      const payInstId = target.getAttribute("data-pay-inst");
+      if (payInstId) {
+        const d = state.debts.find((x) => x.id === payInstId);
+        if (d && d.installmentUSD > 0) {
+          d.paidUSD = Math.min(d.totalUSD, (d.paidUSD || 0) + d.installmentUSD);
+          persistAndRender("toastSaved");
+        }
+        return;
+      }
+
+      const settleDebtId = target.getAttribute("data-settle-debt");
+      if (settleDebtId) {
+        const d = state.debts.find((x) => x.id === settleDebtId);
+        if (d) {
+          d.paidUSD = d.totalUSD;
+          persistAndRender("toastSaved");
+        }
+        return;
+      }
+
+      const customDebtBtnId = target.getAttribute("data-custom-debt-btn");
+      if (customDebtBtnId) {
+        const input = document.querySelector(`[data-custom-debt-input="${customDebtBtnId}"]`);
+        const op = target.getAttribute("data-debt-op") || "add";
+        const localAmt = parseFloat(input.value);
+        const d = state.debts.find((x) => x.id === customDebtBtnId);
+        if (d && !isNaN(localAmt) && localAmt > 0) {
+          const deltaUSD = CurrencyEngine.toUSD(localAmt, state.currency, state.rates);
+          d.paidUSD = op === "sub" ? Math.max(0, (d.paidUSD || 0) - deltaUSD) : Math.min(d.totalUSD, (d.paidUSD || 0) + deltaUSD);
+          persistAndRender("toastSaved");
+        }
+        return;
+      }
+
+      const editDebtId = target.getAttribute("data-edit-debt");
+      if (editDebtId) {
+        openEditDebtModal(editDebtId);
+        return;
+      }
+
+      const delDebtId = target.getAttribute("data-delete-debt");
+      if (delDebtId) {
+        state.debts = state.debts.filter((x) => x.id !== delDebtId);
         persistAndRender("toastDeleted");
         return;
       }

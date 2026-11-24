@@ -43,7 +43,8 @@ function getDefaultState() {
       note: tx.note || ""
     })),
     budgetsUSD: cloneObj(APP_CONFIG.defaultBudgetsUSD),
-    goals: cloneObj(APP_CONFIG.defaultGoals)
+    goals: cloneObj(APP_CONFIG.defaultGoals),
+    debts: []
   };
 }
 
@@ -51,12 +52,13 @@ function getEmptyLedgerState(currentState) {
   const base = currentState ? cloneObj(currentState) : getDefaultState();
   base.transactions = [];
   base.goals = [];
+  base.debts = [];
   return base;
 }
 
 function mergeWithDefaults(parsed) {
   const def = getDefaultState();
-  const merged = {
+  return {
     ...def,
     ...parsed,
     brand: { ...def.brand, ...(parsed.brand || {}) },
@@ -71,16 +73,15 @@ function mergeWithDefaults(parsed) {
     budgetsUSD: { ...def.budgetsUSD, ...(parsed.budgetsUSD || {}) },
     categories: Array.isArray(parsed.categories) && parsed.categories.length > 0 ? parsed.categories : def.categories,
     transactions: Array.isArray(parsed.transactions) ? parsed.transactions : def.transactions,
-    goals: Array.isArray(parsed.goals) ? parsed.goals : def.goals
+    goals: Array.isArray(parsed.goals) ? parsed.goals : def.goals,
+    debts: Array.isArray(parsed.debts) ? parsed.debts : []
   };
-  return merged;
 }
 
 const StorageManager = {
   load() {
     try {
       let raw = localStorage.getItem(STORAGE_KEY);
-      // Automatic seamless migration from v1 data if present
       if (!raw && APP_CONFIG.legacyStorageKey) {
         raw = localStorage.getItem(APP_CONFIG.legacyStorageKey);
       }
@@ -92,7 +93,7 @@ const StorageManager = {
       return getDefaultState();
     }
   },
-
+  
   save(state) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));

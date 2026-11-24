@@ -84,6 +84,10 @@
         <span class="nav-dot"></span>
         <span data-i18n="navSavings">أهداف الادخار</span>
       </button>
+      <button type="button" class="nav-pill" data-tab="debts" role="tab" aria-selected="false">
+        <span class="nav-dot"></span>
+        <span data-i18n="navDebts">الديون والأقساط</span>
+      </button>
       <button type="button" class="nav-pill" data-tab="rule503020" role="tab" aria-selected="false">
         <span class="nav-dot"></span>
         <span data-i18n="navRule">قاعدة التقسيم</span>
@@ -97,7 +101,7 @@
     <!-- Active Exchange Rate & Period Filter Ribbon -->
     <div class="rate-ribbon glass-panel-subtle">
       <span class="gold-ornament">❖</span>
-      <span id="activeRateDisplay">1 USD = 1,310 IQD</span>
+      <span id="activeRateDisplay">1 USD = 1.31 ألف د.ع</span>
       <span class="ribbon-sep">•</span>
       <span id="currentDateDisplay" class="muted-text"></span>
       <span class="ribbon-sep">•</span>
@@ -111,7 +115,6 @@
     <main class="main-stage">
       <!-- TAB 1: DASHBOARD -->
       <section id="tab-dashboard" class="tab-view active">
-        <!-- 4 Classical Glass KPI Cards -->
         <div id="widget-kpi" class="kpi-grid">
           <article class="glass-panel kpi-card kpi-gold">
             <div class="kpi-header">
@@ -150,9 +153,7 @@
           </article>
         </div>
 
-        <!-- Dashboard Split Grid: Quick Entry + Visual Donut Chart -->
         <div class="dashboard-grid" id="dashboardUpperGrid">
-          <!-- Quick Transaction Form -->
           <div id="widget-quickAdd" class="glass-panel card-block">
             <div class="section-head">
               <h2 class="classical-heading" data-i18n="quickAddTitle">تسجيل معاملة سريعة</h2>
@@ -203,7 +204,6 @@
             </form>
           </div>
 
-          <!-- Expense Breakdown Donut Chart -->
           <div id="widget-donut" class="glass-panel card-block">
             <div class="section-head">
               <h2 class="classical-heading" data-i18n="expenseBreakdown">توزيع المصروفات</h2>
@@ -213,7 +213,6 @@
           </div>
         </div>
 
-        <!-- Lower Dashboard: Recent Activity + Budget Watchlist -->
         <div class="dashboard-grid" id="dashboardLowerGrid">
           <div id="widget-recent" class="glass-panel card-block">
             <div class="section-head-row">
@@ -306,7 +305,7 @@
             </div>
             <div class="field-group">
               <label for="goalTargetInput" data-i18n="targetAmount">المبلغ المستهدف</label>
-              <input type="number" id="goalTargetInput" step="any" min="1" required placeholder="1000" />
+              <input type="number" id="goalTargetInput" step="any" min="0.01" required placeholder="1000" />
             </div>
             <div class="field-group">
               <label for="goalInitialInput" data-i18n="initialSaved">الرصيد الابتدائي</label>
@@ -319,7 +318,108 @@
         <div id="savingsGoalsGrid" class="goals-grid"></div>
       </section>
 
-      <!-- TAB 5: CUSTOMIZABLE INCOME SPLIT RULE -->
+      <!-- TAB 5: DEBTS & INSTALLMENTS -->
+      <section id="tab-debts" class="tab-view">
+        <!-- 3 Summary KPI Cards -->
+        <div class="debt-summary-grid">
+          <article class="glass-panel kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label" data-i18n="debtSummaryOwe">المتبقي عليّ (ديون وأقساط)</span>
+              <span class="kpi-badge">↘</span>
+            </div>
+            <div class="kpi-value classical-num negative-text" id="debtTotalOwe">0</div>
+          </article>
+
+          <article class="glass-panel kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label" data-i18n="debtSummaryOwed">المتبقي لي عند الناس</span>
+              <span class="kpi-badge">↗</span>
+            </div>
+            <div class="kpi-value classical-num positive-text" id="debtTotalOwed">0</div>
+          </article>
+
+          <article class="glass-panel kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label" data-i18n="debtSummaryInst">إجمالي الأقساط الدورية النشطة</span>
+              <span class="kpi-badge">◷</span>
+            </div>
+            <div class="kpi-value classical-num" id="debtTotalInstallments">0</div>
+          </article>
+        </div>
+
+        <!-- Add New Debt / Installment Form -->
+        <div class="glass-panel card-block">
+          <div class="section-head">
+            <h2 class="classical-heading" data-i18n="newDebtTitle">إضافة دين أو قسط جديد</h2>
+            <span class="gold-line"></span>
+          </div>
+          <form id="newDebtForm" class="glass-form">
+            <div class="form-row-3">
+              <div class="field-group">
+                <label for="debtKindInput" data-i18n="debtKindLabel">النوع</label>
+                <select id="debtKindInput">
+                  <option value="owe" data-i18n="debtKindOwe">دين عليّ</option>
+                  <option value="installment" data-i18n="debtKindInstallment">قسط</option>
+                  <option value="owed" data-i18n="debtKindOwed">دين لي</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="debtTitleInput" data-i18n="debtPersonLabel">الشخص أو الجهة</label>
+                <input type="text" id="debtTitleInput" required data-i18n-placeholder="debtPersonPlaceholder" placeholder="مثال: أحمد، قسط الآيباد، قسط الجامعة..." />
+              </div>
+              <div class="field-group">
+                <label for="debtTotalInput" id="debtTotalLabel" data-i18n="debtTotalLabel">المبلغ الكلي</label>
+                <input type="number" id="debtTotalInput" step="any" min="0.01" required placeholder="0" />
+              </div>
+            </div>
+
+            <div class="form-row-3">
+              <div class="field-group">
+                <label for="debtPaidInput" data-i18n="debtPaidLabel">المسدّد حالياً</label>
+                <input type="number" id="debtPaidInput" step="any" min="0" value="0" />
+              </div>
+              <div class="field-group">
+                <label for="debtInstInput" data-i18n="debtInstLabel">قيمة القسط الواحد (اختياري)</label>
+                <input type="number" id="debtInstInput" step="any" min="0" placeholder="0" />
+              </div>
+              <div class="field-group">
+                <label for="debtDueInput" data-i18n="debtDueLabel">تاريخ الاستحقاق (اختياري)</label>
+                <input type="date" id="debtDueInput" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="field-group">
+                <label for="debtNoteInput" data-i18n="noteLabel">ملاحظة (اختياري)</label>
+                <input type="text" id="debtNoteInput" data-i18n-placeholder="notePlaceholder" placeholder="تفاصيل إضافية أو موعد الدفع..." />
+              </div>
+              <div class="field-group" style="justify-content: flex-end;">
+                <button type="submit" class="btn-classical-primary" data-i18n="createDebtBtn">إضافة إلى الديون والأقساط</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Debts Filter + Cards Grid -->
+        <div class="glass-panel card-block">
+          <div class="section-head-row wrap-row">
+            <div>
+              <h2 class="classical-heading" data-i18n="debtsListTitle">قائمة الديون والأقساط</h2>
+              <span class="gold-line"></span>
+            </div>
+            <select id="debtFilterSelect" class="glass-input" style="width:auto; min-width:170px;">
+              <option value="all" data-i18n="debtFilterAll">الكل</option>
+              <option value="owe" data-i18n="debtKindOwe">ديون عليّ</option>
+              <option value="installment" data-i18n="debtKindInstallment">الأقساط</option>
+              <option value="owed" data-i18n="debtKindOwed">ديون لي</option>
+              <option value="settled" data-i18n="debtFilterSettled">المسدّدة بالكامل</option>
+            </select>
+          </div>
+          <div id="debtsGrid" class="goals-grid"></div>
+        </div>
+      </section>
+
+      <!-- TAB 6: CUSTOMIZABLE INCOME SPLIT RULE -->
       <section id="tab-rule503020" class="tab-view">
         <div class="glass-panel card-block">
           <div class="section-head">
@@ -328,7 +428,6 @@
             <span class="gold-line"></span>
           </div>
 
-          <!-- Editable Split Ratios Bar -->
           <div class="rule-editor-box">
             <div class="rule-presets-row">
               <span class="rule-editor-label" data-i18n="ruleCustomizeLabel">تخصيص النسب (%):</span>
@@ -358,10 +457,9 @@
         </div>
       </section>
 
-      <!-- TAB 6: CUSTOMIZE & SETTINGS STUDIO -->
+      <!-- TAB 7: CUSTOMIZE & SETTINGS STUDIO -->
       <section id="tab-customize" class="tab-view">
         <div class="customize-grid">
-          <!-- Card 1: Brand Identity & Theme Accent -->
           <div class="glass-panel card-block">
             <div class="section-head">
               <h2 class="classical-heading" data-i18n="customBrandTitle">هوية التطبيق والمظهر</h2>
@@ -410,7 +508,6 @@
             </form>
           </div>
 
-          <!-- Card 2: Dashboard Layout & Thresholds -->
           <div class="glass-panel card-block">
             <div class="section-head">
               <h2 class="classical-heading" data-i18n="customLayoutTitle">تخصيص لوحة التحكم والحدود</h2>
@@ -461,7 +558,6 @@
           </div>
         </div>
 
-        <!-- Card 3: Full Categories Manager -->
         <div class="glass-panel card-block">
           <div class="section-head">
             <h2 class="classical-heading" data-i18n="customCatsTitle">إدارة الفئات</h2>
@@ -506,7 +602,6 @@
           <div id="categoriesManageList" class="manage-cats-grid"></div>
         </div>
 
-        <!-- Card 4: Currencies & Data Management -->
         <div class="customize-grid">
           <div class="glass-panel card-block">
             <div class="section-head-row wrap-row">
@@ -639,7 +734,7 @@
         <div class="form-row">
           <div class="field-group">
             <label for="editGoalTarget" id="editGoalTargetLabel" data-i18n="targetAmount">المبلغ المستهدف</label>
-            <input type="number" id="editGoalTarget" step="any" min="1" required />
+            <input type="number" id="editGoalTarget" step="any" min="0.01" required />
           </div>
           <div class="field-group">
             <label for="editGoalSaved" id="editGoalSavedLabel" data-i18n="currentSavedLabel">المبلغ المدخر حالياً</label>
@@ -648,6 +743,59 @@
         </div>
         <div class="modal-actions">
           <button type="button" class="btn-glass-secondary" data-close-modal="editGoalModal" data-i18n="cancelBtn">إلغاء</button>
+          <button type="submit" class="btn-classical-primary" data-i18n="saveChangesBtn">حفظ التعديلات</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Edit Debt / Installment -->
+  <div id="editDebtModal" class="glass-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-panel modal-card">
+      <div class="section-head-row">
+        <h3 class="classical-heading" data-i18n="editDebtTitle">تعديل الدين / القسط</h3>
+        <button type="button" class="icon-btn-subtle close-modal" data-close-modal="editDebtModal">✕</button>
+      </div>
+      <form id="editDebtForm" class="glass-form">
+        <input type="hidden" id="editDebtId" />
+        <div class="form-row">
+          <div class="field-group">
+            <label for="editDebtKind" data-i18n="debtKindLabel">النوع</label>
+            <select id="editDebtKind">
+              <option value="owe" data-i18n="debtKindOwe">دين عليّ</option>
+              <option value="installment" data-i18n="debtKindInstallment">قسط</option>
+              <option value="owed" data-i18n="debtKindOwed">دين لي</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="editDebtDue" data-i18n="debtDueLabel">تاريخ الاستحقاق</label>
+            <input type="date" id="editDebtDue" />
+          </div>
+        </div>
+        <div class="field-group">
+          <label for="editDebtTitle" data-i18n="debtPersonLabel">الشخص أو الجهة</label>
+          <input type="text" id="editDebtTitle" required />
+        </div>
+        <div class="form-row-3">
+          <div class="field-group">
+            <label for="editDebtTotal" id="editDebtTotalLabel" data-i18n="debtTotalLabel">المبلغ الكلي</label>
+            <input type="number" id="editDebtTotal" step="any" min="0.01" required />
+          </div>
+          <div class="field-group">
+            <label for="editDebtPaid" id="editDebtPaidLabel" data-i18n="debtPaidLabel">المسدّد</label>
+            <input type="number" id="editDebtPaid" step="any" min="0" required />
+          </div>
+          <div class="field-group">
+            <label for="editDebtInst" id="editDebtInstLabel" data-i18n="debtInstShort">قيمة القسط</label>
+            <input type="number" id="editDebtInst" step="any" min="0" />
+          </div>
+        </div>
+        <div class="field-group">
+          <label for="editDebtNote" data-i18n="noteLabel">ملاحظة (اختياري)</label>
+          <input type="text" id="editDebtNote" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-glass-secondary" data-close-modal="editDebtModal" data-i18n="cancelBtn">إلغاء</button>
           <button type="submit" class="btn-classical-primary" data-i18n="saveChangesBtn">حفظ التعديلات</button>
         </div>
       </form>
@@ -750,7 +898,7 @@
   <!-- Toast Feedback -->
   <div id="toastNotification" class="glass-toast hidden" role="status" aria-live="polite"></div>
 
-  <!-- Modular JavaScript Files (Ordered for Direct Browser & File Protocol Compatibility) -->
+  <!-- Modular JavaScript Files -->
   <script src="js/config.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/currency.js"></script>
