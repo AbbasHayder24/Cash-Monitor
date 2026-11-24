@@ -7,9 +7,11 @@
   let activePeriod = "all"; // "all" or "YYYY-MM"
   let toastTimer = null;
 
-  /* ---------- Clean Up Removed Built-in Currencies (Keep IQD, USD & Custom) ---------- */
+  /* ---------- Sync Built-in Currencies & Auto-Migrate IQD to Thousands Unit ---------- */
   function syncBuiltinCurrencies() {
     let changed = false;
+
+    // 1. Remove old built-in currencies (EUR, GBP, SAR, AED) while keeping user-added custom ones
     Object.keys(state.currencies || {}).forEach((code) => {
       if (state.currencies[code] && state.currencies[code].builtin && !APP_CONFIG.defaultCurrencies[code]) {
         delete state.currencies[code];
@@ -17,6 +19,28 @@
         changed = true;
       }
     });
+
+    // 2. Refresh active built-in currency metadata (e.g. IQD -> "ألف د.ع", decimals: 2, presets: [10, 50])
+    Object.keys(APP_CONFIG.defaultCurrencies).forEach((code) => {
+      const targetMeta = APP_CONFIG.defaultCurrencies[code];
+      const currentMeta = state.currencies[code];
+      if (
+        !currentMeta ||
+        currentMeta.symbolAr !== targetMeta.symbolAr ||
+        currentMeta.decimals !== targetMeta.decimals ||
+        JSON.stringify(currentMeta.stepPresets) !== JSON.stringify(targetMeta.stepPresets)
+      ) {
+        state.currencies[code] = JSON.parse(JSON.stringify(targetMeta));
+        changed = true;
+      }
+    });
+
+    // 3. Auto-convert legacy full-dinar rate (e.g. 1310 -> 1.31, 1500 -> 1.5) to thousands unit
+    if (typeof state.rates.IQD === "number" && state.rates.IQD >= 100) {
+      state.rates.IQD = Number((state.rates.IQD / 1000).toFixed(4));
+      changed = true;
+    }
+
     if (!state.currencies[state.currency]) {
       state.currency = APP_CONFIG.defaults.currency || "IQD";
       changed = true;
@@ -126,7 +150,6 @@
     root.setProperty("--gold-glow", hexToRgba(primary, 0.25));
     root.setProperty("--glass-border-gold", hexToRgba(primary, 0.36));
 
-    // Toggle dashboard widgets visibility
     const w = state.settings.widgets || {};
     const toggleVis = (id, visible) => {
       const el = document.getElementById(id);
@@ -209,13 +232,11 @@
     document.getElementById("themeIcon").textContent = state.theme === "dark" ? "☀" : "☾";
 
     const rateDisplay = document.getElementById("activeRateDisplay");
-    if (state.currency === "USD") {
-      const iqdRate = state.rates.IQD || 1310;
-      rateDisplay.textContent = `1 USD = ${iqdRate.toLocaleString()} IQD`;
-    } else {
-      const rateVal = state.rates[state.currency] || 1;
-      rateDisplay.textContent = `1 USD = ${rateVal.toLocaleString()} ${state.currency}`;
-    }
+    const targetCode = state.currency === "USD" ? "IQD" : state.currency;
+    const targetMeta = CurrencyEngine.getMeta(targetCode, state.currencies);
+    const sym = state.lang === "ar" ? (targetMeta.symbolAr || targetCode) : (targetMeta.symbolEn || targetCode);
+    const rateVal = state.rates[targetCode] || 1;
+    rateDisplay.textContent = `1 USD = ${rateVal.toLocaleString()} ${sym}`;
 
     const dateEl = document.getElementById("currentDateDisplay");
     const locale = state.lang === "ar" ? "ar-IQ" : "en-US";
@@ -227,7 +248,9 @@
     });
 
     const dict = I18N[state.lang] || I18N.ar;
-    document.getElementById("quickAmountLabel").textContent = `${dict.amount} (${state.currency})`;
+    const activeMeta = CurrencyEngine.getMeta(state.currency, state.currencies);
+    const activeSym = state.lang === "ar" ? (activeMeta.symbolAr || state.currency) : (activeMeta.symbolEn || state.currency);
+    document.getElementById("quickAmountLabel").textContent = `${dict.amount} (${activeSym})`;
   }
 
   /* ---------- Metrics Computation ---------- */
@@ -264,7 +287,6 @@
 
     renderExpenseDonut(document.getElementById("donutChartMount"), metrics.expenseByCat, state);
 
-    // Recent transactions (count customizable)
     const recentLimit = Math.max(1, Number(state.settings.recentTxCount) || 5);
     const recentContainer = document.getElementById("recentTransactionsList");
     const sorted = [...metrics.scoped].sort((a, b) => b.date.localeCompare(a.date)).slice(0, recentLimit);
@@ -293,7 +315,6 @@
         .join("");
     }
 
-    // Budget Watchlist (count & warning threshold customizable)
     const watchLimit = Math.max(1, Number(state.settings.budgetWatchCount) || 4);
     const warnPct = Number(state.settings.warnThresholdPct) || 75;
     const watchContainer = document.getElementById("dashboardBudgetWatch");
@@ -413,7 +434,7 @@
               ${dict.spentOf} <strong>${formatMoney(spentUSD)}</strong> ${dict.outOf} <strong>${formatMoney(limitUSD)}</strong>
             </div>
             <div class="budget-limit-editor">
-              <input type="number" step="any" min="1" value="${inputVal}" data-budget-input="${escapeHTML(cat.id)}" />
+              <input type="number" step="any" min="0.01" value="${inputVal}" data-budget-input="${escapeHTML(cat.id)}" />
               <button type="button" class="chip-btn" data-save-budget="${escapeHTML(cat.id)}">${dict.updateLimit}</button>
             </div>
           </div>
@@ -427,7 +448,7 @@
     const dict = I18N[state.lang] || I18N.ar;
     const grid = document.getElementById("savingsGoalsGrid");
     const meta = CurrencyEngine.getMeta(state.currency, state.currencies);
-    const presets = Array.isArray(meta.stepPresets) && meta.stepPresets.length ? meta.stepPresets : [25, 100];
+    const presets = Array.isArray(meta.stepPresets) && meta.stepPresets.length ? meta.stepPresets : [10, 50];
 
     if (state.goals.length === 0) {
       grid.innerHTML = `<div class="glass-panel card-block"><p class="muted-text">${dict.noGoalsYet}</p></div>`;
@@ -571,7 +592,6 @@
   function renderCustomizeTab() {
     const dict = I18N[state.lang] || I18N.ar;
 
-    // 1. Brand & Appearance
     document.getElementById("brandNameInput").value = state.brand.name || "FinFlow";
     document.getElementById("brandEmblemInput").value = state.brand.emblem || "FF";
     document.getElementById("brandSubArInput").value = state.brand.subtitleAr || "";
@@ -587,7 +607,6 @@
       })
       .join("");
 
-    // 2. Layout & Thresholds
     const w = state.settings.widgets || {};
     document.getElementById("toggleWidgetKpi").checked = w.kpi !== false;
     document.getElementById("toggleWidgetQuickAdd").checked = w.quickAdd !== false;
@@ -598,7 +617,6 @@
     document.getElementById("recentCountInput").value = state.settings.recentTxCount || 5;
     document.getElementById("budgetWatchCountInput").value = state.settings.budgetWatchCount || 4;
 
-    // 3. Categories Manager
     document.getElementById("categoriesManageList").innerHTML = state.categories
       .map((c) => {
         const typeLabel = c.type === "income" ? dict.income : dict.expense;
@@ -626,7 +644,6 @@
       })
       .join("");
 
-    // 4. Custom Currencies List
     const customCurrs = Object.values(state.currencies || {}).filter((c) => !c.builtin);
     document.getElementById("customCurrenciesList").innerHTML = customCurrs
       .map(
@@ -675,10 +692,12 @@
     list.innerHTML = Object.keys(currs)
       .filter((code) => code !== "USD")
       .map((code) => {
+        const meta = currs[code];
+        const sym = state.lang === "ar" ? (meta.symbolAr || code) : (meta.symbolEn || code);
         const val = state.rates[code] || 1;
         return `
           <div class="field-group">
-            <label for="rate_${escapeHTML(code)}">1 USD → ${escapeHTML(code)}</label>
+            <label for="rate_${escapeHTML(code)}">1 USD → ${escapeHTML(code)} (${escapeHTML(sym)})</label>
             <input type="number" id="rate_${escapeHTML(code)}" name="${escapeHTML(code)}" step="any" min="0.0001" value="${val}" required />
           </div>
         `;
@@ -691,12 +710,14 @@
     const tx = state.transactions.find((t) => t.id === txId);
     if (!tx) return;
     const dict = I18N[state.lang] || I18N.ar;
+    const activeMeta = CurrencyEngine.getMeta(state.currency, state.currencies);
+    const activeSym = state.lang === "ar" ? (activeMeta.symbolAr || state.currency) : (activeMeta.symbolEn || state.currency);
     document.getElementById("editTxId").value = tx.id;
     document.getElementById("editTxType").value = tx.type;
     document.getElementById("editTxDate").value = tx.date;
     document.getElementById("editTxTitle").value = tx.title;
     document.getElementById("editTxAmount").value = toLocalInputVal(tx.amountUSD);
-    document.getElementById("editTxAmountLabel").textContent = `${dict.amount} (${state.currency})`;
+    document.getElementById("editTxAmountLabel").textContent = `${dict.amount} (${activeSym})`;
     document.getElementById("editTxNote").value = tx.note || "";
     populateEditTxCategorySelect(tx.type, tx.category);
     document.getElementById("editTxModal").classList.remove("hidden");
@@ -706,12 +727,14 @@
     const goal = state.goals.find((g) => g.id === goalId);
     if (!goal) return;
     const dict = I18N[state.lang] || I18N.ar;
+    const activeMeta = CurrencyEngine.getMeta(state.currency, state.currencies);
+    const activeSym = state.lang === "ar" ? (activeMeta.symbolAr || state.currency) : (activeMeta.symbolEn || state.currency);
     document.getElementById("editGoalId").value = goal.id;
     document.getElementById("editGoalName").value = goal.name;
     document.getElementById("editGoalTarget").value = toLocalInputVal(goal.targetUSD);
     document.getElementById("editGoalSaved").value = toLocalInputVal(goal.savedUSD);
-    document.getElementById("editGoalTargetLabel").textContent = `${dict.targetAmount} (${state.currency})`;
-    document.getElementById("editGoalSavedLabel").textContent = `${dict.currentSavedLabel} (${state.currency})`;
+    document.getElementById("editGoalTargetLabel").textContent = `${dict.targetAmount} (${activeSym})`;
+    document.getElementById("editGoalSavedLabel").textContent = `${dict.currentSavedLabel} (${activeSym})`;
     document.getElementById("editGoalModal").classList.remove("hidden");
   }
 
@@ -797,7 +820,6 @@
   function bindEvents() {
     document.getElementById("quickDate").value = getTodayISO(0);
 
-    // Navigation & jump shortcuts
     document.querySelectorAll(".nav-pill").forEach((btn) => {
       btn.addEventListener("click", () => switchTab(btn.getAttribute("data-tab")));
     });
@@ -805,13 +827,11 @@
       btn.addEventListener("click", () => switchTab(btn.getAttribute("data-jump-tab")));
     });
 
-    // Period filter in ribbon
     document.getElementById("periodSelect").addEventListener("change", (e) => {
       activePeriod = e.target.value;
       renderAll();
     });
 
-    // Currency / Language / Theme toggles
     document.getElementById("currencySelect").addEventListener("change", (e) => {
       state.currency = e.target.value;
       persistAndRender();
@@ -825,12 +845,10 @@
       persistAndRender();
     });
 
-    // Quick transaction type switch
     document.querySelectorAll('input[name="txType"]').forEach((radio) => {
       radio.addEventListener("change", populateCategorySelects);
     });
 
-    // Submit quick transaction
     document.getElementById("quickTxForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const type = document.querySelector('input[name="txType"]:checked').value;
@@ -858,18 +876,15 @@
       persistAndRender("toastAdded");
     });
 
-    // Transactions tab filters
     ["txSearchInput", "txTypeFilter", "txCategoryFilter", "txMonthFilter"].forEach((id) => {
       document.getElementById(id).addEventListener("input", renderTransactionsTable);
       document.getElementById(id).addEventListener("change", renderTransactionsTable);
     });
 
-    // Edit Transaction Modal type change updates categories
     document.getElementById("editTxType").addEventListener("change", (e) => {
       populateEditTxCategorySelect(e.target.value, null);
     });
 
-    // Submit Edit Transaction
     document.getElementById("editTxForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const id = document.getElementById("editTxId").value;
@@ -888,7 +903,6 @@
       persistAndRender("toastSaved");
     });
 
-    // Submit Edit Savings Goal
     document.getElementById("editGoalForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const id = document.getElementById("editGoalId").value;
@@ -905,7 +919,6 @@
       persistAndRender("toastSaved");
     });
 
-    // Submit Edit Category
     document.getElementById("editCatForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const id = document.getElementById("editCatId").value;
@@ -923,7 +936,6 @@
       persistAndRender("toastSaved");
     });
 
-    // Create new savings goal
     document.getElementById("newGoalForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const name = document.getElementById("goalNameInput").value.trim();
@@ -943,7 +955,6 @@
       persistAndRender("toastAdded");
     });
 
-    // Editable Split Rule form
     ["ruleNeedsInput", "ruleWantsInput", "ruleSavingsInput"].forEach((id) => {
       document.getElementById(id).addEventListener("input", updateRuleSumBadge);
     });
@@ -960,7 +971,6 @@
       persistAndRender("toastSaved");
     });
 
-    // Customize Tab: Brand & Appearance Form
     document.getElementById("customAccentPicker").addEventListener("input", (e) => {
       state.settings.accentId = "custom";
       state.settings.customAccent = e.target.value;
@@ -976,7 +986,6 @@
       persistAndRender("toastSaved");
     });
 
-    // Customize Tab: Layout & Thresholds Form
     document.getElementById("layoutForm").addEventListener("submit", (e) => {
       e.preventDefault();
       state.settings.widgets = {
@@ -992,7 +1001,6 @@
       persistAndRender("toastSaved");
     });
 
-    // Customize Tab: Add Category Form
     document.getElementById("addCategoryForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const nameAr = document.getElementById("newCatNameAr").value.trim();
@@ -1013,7 +1021,6 @@
       persistAndRender("toastAdded");
     });
 
-    // Customize Tab: Add Custom Currency Form
     document.getElementById("addCurrencyForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const code = document.getElementById("newCurrCode").value.trim().toUpperCase();
@@ -1043,7 +1050,6 @@
       persistAndRender("toastAdded");
     });
 
-    // Exchange Rate Modal
     document.getElementById("openRateModalBtn").addEventListener("click", openRateModal);
     document.getElementById("customizeOpenRatesBtn").addEventListener("click", openRateModal);
     document.getElementById("exchangeRateForm").addEventListener("submit", (e) => {
@@ -1062,7 +1068,6 @@
       persistAndRender("toastSaved");
     });
 
-    // Backup Modal & JSON import triggers (both modal & Customize tab)
     document.getElementById("openBackupModalBtn").addEventListener("click", () => {
       document.getElementById("backupModal").classList.remove("hidden");
     });
@@ -1091,7 +1096,6 @@
       });
     });
 
-    // Delegated body clicks
     document.body.addEventListener("click", (e) => {
       const target = e.target.closest("button");
       if (!target) return;

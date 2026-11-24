@@ -60,16 +60,35 @@ const APP_CONFIG = {
     { label: "40 / 30 / 30", needs: 40, wants: 30, savings: 30 }
   ],
   
-  // 5) أسعار الصرف الافتراضية مقابل الدولار الأمريكي (USD) — العراقي والأمريكي فقط
+  // 5) أسعار الصرف الافتراضية مقابل الدولار الأمريكي (USD)
+  // الدينار العراقي بنظام الألف: 1.31 = 1,310 دينار (مثلاً: 25 = 25,000 د.ع، و 0.25 = 250 د.ع)
   defaultRates: {
     USD: 1,
-    IQD: 1310 // الدينار العراقي (قابل للتعديل من الواجهة)
+    IQD: 1.31
   },
   
-  // 6) بيانات العملات المدعومة (الدينار العراقي والدولار الأمريكي فقط، مع إمكانية إضافة عملات أخرى من الواجهة)
+  // 6) بيانات العملات المدعومة (الدينار العراقي بالألف + الدولار الأمريكي)
   defaultCurrencies: {
-    IQD: { code: "IQD", nameAr: "الدينار العراقي", nameEn: "Iraqi Dinar", symbolAr: "د.ع", symbolEn: "IQD", decimals: 0, stepPresets: [10000, 50000], builtin: true },
-    USD: { code: "USD", nameAr: "الدولار الأمريكي", nameEn: "US Dollar", symbolAr: "$", symbolEn: "$", decimals: 2, stepPresets: [25, 100], builtin: true }
+    IQD: {
+      code: "IQD",
+      nameAr: "الدينار العراقي (بالألف)",
+      nameEn: "Iraqi Dinar (K)",
+      symbolAr: "ألف د.ع",
+      symbolEn: "K IQD",
+      decimals: 2,
+      stepPresets: [10, 50],
+      builtin: true
+    },
+    USD: {
+      code: "USD",
+      nameAr: "الدولار الأمريكي",
+      nameEn: "US Dollar",
+      symbolAr: "$",
+      symbolEn: "$",
+      decimals: 2,
+      stepPresets: [25, 100],
+      builtin: true
+    }
   },
   
   // 7) الفئات الافتراضية (المصروفات والدخل) — قابلة للتعديل والإضافة والحذف بالكامل
