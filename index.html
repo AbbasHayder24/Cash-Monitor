@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light" data-compact="false">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinFlow — السجل المالي الكلاسيكي</title>
+  <!-- Classical & Bilingual Typography with System Fallbacks -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/components.css" />
+</head>
+<body>
+  <!-- Ambient Liquid Mesh Orbs -->
+  <div class="liquid-canvas" aria-hidden="true">
+    <div class="liquid-orb orb-gold"></div>
+    <div class="liquid-orb orb-sapphire"></div>
+    <div class="liquid-orb orb-emerald"></div>
+    <div class="liquid-orb orb-pearl"></div>
+  </div>
+
+  <div class="app-shell">
+    <!-- Top Classical Liquid Glass Header -->
+    <header class="glass-header glass-panel">
+      <div class="brand-cluster">
+        <div class="classical-emblem" aria-hidden="true">
+          <span id="brandEmblemText">FF</span>
+        </div>
+        <div class="brand-titles">
+          <h1 class="classical-title" id="brandTitleText">FinFlow</h1>
+          <p class="brand-subtitle" id="brandSubtitleText" data-i18n="appSubtitle">السجل المالي الكلاسيكي</p>
+        </div>
+      </div>
+
+      <div class="toolbar-cluster">
+        <!-- Dynamic Currency Switcher + Rate Modal Trigger -->
+        <div class="control-pill currency-group">
+          <label for="currencySelect" class="sr-only" data-i18n="currency">العملة</label>
+          <select id="currencySelect" class="glass-select" aria-label="Currency"></select>
+          <button type="button" id="openRateModalBtn" class="icon-btn-subtle" data-i18n-title="exchangeRatesTitle" title="تعديل أسعار الصرف">
+            ⇄
+          </button>
+        </div>
+
+        <!-- Language Switcher -->
+        <button type="button" id="langToggleBtn" class="control-pill action-pill" aria-label="Switch Language">
+          <span class="pill-icon">🌐</span>
+          <span id="langToggleLabel">English</span>
+        </button>
+
+        <!-- Theme Switcher -->
+        <button type="button" id="themeToggleBtn" class="control-pill icon-pill" data-i18n-title="toggleTheme" title="تبديل المظهر">
+          <span id="themeIcon">☾</span>
+        </button>
+
+        <!-- Quick Jump to Customize -->
+        <button type="button" id="openCustomizeShortcutBtn" class="control-pill icon-pill" data-jump-tab="customize" data-i18n-title="customizeTitle" title="التخصيص والإعدادات">
+          <span>⚙</span>
+        </button>
+
+        <!-- Data Backup / Restore -->
+        <button type="button" id="openBackupModalBtn" class="control-pill icon-pill" data-i18n-title="backupTitle" title="النسخ الاحتياطي">
+          <span>⇅</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Liquid Pill Navigation Bar -->
+    <nav class="glass-nav glass-panel" role="tablist" aria-label="Main Sections">
+      <button type="button" class="nav-pill active" data-tab="dashboard" role="tab" aria-selected="true">
+        <span class="nav-dot"></span>
+        <span data-i18n="navDashboard">لوحة التحكم</span>
+      </button>
+      <button type="button" class="nav-pill" data-tab="transactions" role="tab" aria-selected="false">
+        <span class="nav-dot"></span>
+        <span data-i18n="navTransactions">المعاملات</span>
+      </button>
+      <button type="button" class="nav-pill" data-tab="budgets" role="tab" aria-selected="false">
+        <span class="nav-dot"></span>
+        <span data-i18n="navBudgets">الميزانية</span>
+      </button>
+      <button type="button" class="nav-pill" data-tab="savings" role="tab" aria-selected="false">
+        <span class="nav-dot"></span>
+        <span data-i18n="navSavings">أهداف الادخار</span>
+      </button>
+      <button type="button" class="nav-pill" data-tab="rule503020" role="tab" aria-selected="false">
+        <span class="nav-dot"></span>
+        <span data-i18n="navRule">قاعدة التقسيم</span>
+      </button>
+      <button type="button" class="nav-pill" data-tab="customize" role="tab" aria-selected="false">
+        <span class="nav-dot"></span>
+        <span data-i18n="navCustomize">التخصيص</span>
+      </button>
+    </nav>
+
+    <!-- Active Exchange Rate & Period Filter Ribbon -->
+    <div class="rate-ribbon glass-panel-subtle">
+      <span class="gold-ornament">❖</span>
+      <span id="activeRateDisplay">1 USD = 1,310 IQD</span>
+      <span class="ribbon-sep">•</span>
+      <span id="currentDateDisplay" class="muted-text"></span>
+      <span class="ribbon-sep">•</span>
+      <label class="ribbon-period-wrap">
+        <span data-i18n="periodLabel">الفترة:</span>
+        <select id="periodSelect" class="glass-select ribbon-select" aria-label="Active Period"></select>
+      </label>
+    </div>
+
+    <!-- Main Dynamic Content Viewport -->
+    <main class="main-stage">
+      <!-- TAB 1: DASHBOARD -->
+      <section id="tab-dashboard" class="tab-view active">
+        <!-- 4 Classical Glass KPI Cards -->
+        <div id="widget-kpi" class="kpi-grid">
+          <article class="glass-panel kpi-card kpi-gold">
+            <div class="kpi-header">
+              <span class="kpi-label" data-i18n="netBalance">الرصيد الصافي</span>
+              <span class="kpi-badge">✦</span>
+            </div>
+            <div class="kpi-value classical-num" id="kpiNetBalance">0</div>
+            <div class="kpi-foot" data-i18n="netBalanceSub">إجمالي الأصول المتاحة حالياً</div>
+          </article>
+
+          <article class="glass-panel kpi-card kpi-emerald">
+            <div class="kpi-header">
+              <span class="kpi-label" data-i18n="monthlyIncome">الدخل</span>
+              <span class="kpi-badge">↗</span>
+            </div>
+            <div class="kpi-value classical-num positive-text" id="kpiIncome">0</div>
+            <div class="kpi-foot" data-i18n="incomeSub">إجمالي الإيرادات المسجلة</div>
+          </article>
+
+          <article class="glass-panel kpi-card kpi-crimson">
+            <div class="kpi-header">
+              <span class="kpi-label" data-i18n="monthlyExpenses">المصروفات</span>
+              <span class="kpi-badge">↘</span>
+            </div>
+            <div class="kpi-value classical-num negative-text" id="kpiExpenses">0</div>
+            <div class="kpi-foot" data-i18n="expensesSub">إجمالي النفقات التشغيلية</div>
+          </article>
+
+          <article class="glass-panel kpi-card kpi-sapphire">
+            <div class="kpi-header">
+              <span class="kpi-label" data-i18n="savingsRate">معدل الادخار</span>
+              <span class="kpi-badge">◈</span>
+            </div>
+            <div class="kpi-value classical-num" id="kpiSavingsRate">0%</div>
+            <div class="kpi-foot" id="kpiSavingsVerdict" data-i18n="savingsSub">نسبة الفائض من الدخل</div>
+          </article>
+        </div>
+
+        <!-- Dashboard Split Grid: Quick Entry + Visual Donut Chart -->
+        <div class="dashboard-grid" id="dashboardUpperGrid">
+          <!-- Quick Transaction Form -->
+          <div id="widget-quickAdd" class="glass-panel card-block">
+            <div class="section-head">
+              <h2 class="classical-heading" data-i18n="quickAddTitle">تسجيل معاملة سريعة</h2>
+              <span class="gold-line"></span>
+            </div>
+            <form id="quickTxForm" class="glass-form">
+              <div class="segmented-type">
+                <label class="seg-option">
+                  <input type="radio" name="txType" value="expense" checked />
+                  <span data-i18n="expense">مصروف</span>
+                </label>
+                <label class="seg-option">
+                  <input type="radio" name="txType" value="income" />
+                  <span data-i18n="income">دخل</span>
+                </label>
+              </div>
+
+              <div class="form-row">
+                <div class="field-group">
+                  <label for="quickTitle" data-i18n="description">الوصف</label>
+                  <input type="text" id="quickTitle" required data-i18n-placeholder="descPlaceholder" placeholder="مثال: كتب طبية، قهوة، راتب..." />
+                </div>
+                <div class="field-group">
+                  <label for="quickAmount" id="quickAmountLabel" data-i18n="amount">المبلغ</label>
+                  <input type="number" id="quickAmount" step="any" min="0.01" required placeholder="0" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="field-group">
+                  <label for="quickCategory" data-i18n="category">الفئة</label>
+                  <select id="quickCategory"></select>
+                </div>
+                <div class="field-group">
+                  <label for="quickDate" data-i18n="date">التاريخ</label>
+                  <input type="date" id="quickDate" required />
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label for="quickNote" data-i18n="noteLabel">ملاحظة (اختياري)</label>
+                <input type="text" id="quickNote" data-i18n-placeholder="notePlaceholder" placeholder="تفاصيل إضافية أو مكان الدفع..." />
+              </div>
+
+              <button type="submit" class="btn-classical-primary" data-i18n="addTransactionBtn">
+                إضافة إلى السجل
+              </button>
+            </form>
+          </div>
+
+          <!-- Expense Breakdown Donut Chart -->
+          <div id="widget-donut" class="glass-panel card-block">
+            <div class="section-head">
+              <h2 class="classical-heading" data-i18n="expenseBreakdown">توزيع المصروفات</h2>
+              <span class="gold-line"></span>
+            </div>
+            <div class="chart-container" id="donutChartMount"></div>
+          </div>
+        </div>
+
+        <!-- Lower Dashboard: Recent Activity + Budget Watchlist -->
+        <div class="dashboard-grid" id="dashboardLowerGrid">
+          <div id="widget-recent" class="glass-panel card-block">
+            <div class="section-head-row">
+              <div>
+                <h2 class="classical-heading" data-i18n="recentActivity">أحدث المعاملات</h2>
+                <span class="gold-line"></span>
+              </div>
+              <button type="button" class="link-btn" data-jump-tab="transactions" data-i18n="viewAll">عرض الكل</button>
+            </div>
+            <div id="recentTransactionsList" class="tx-list"></div>
+          </div>
+
+          <div id="widget-budgetWatch" class="glass-panel card-block">
+            <div class="section-head-row">
+              <div>
+                <h2 class="classical-heading" data-i18n="budgetWatch">مراقبة الميزانية</h2>
+                <span class="gold-line"></span>
+              </div>
+              <button type="button" class="link-btn" data-jump-tab="budgets" data-i18n="manageBudgets">إدارة الحدود</button>
+            </div>
+            <div id="dashboardBudgetWatch" class="budget-watch-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: TRANSACTIONS -->
+      <section id="tab-transactions" class="tab-view">
+        <div class="glass-panel card-block">
+          <div class="section-head-row wrap-row">
+            <div>
+              <h2 class="classical-heading" data-i18n="allTransactions">سجل المعاملات الكامل</h2>
+              <span class="gold-line"></span>
+            </div>
+            <div class="filter-bar">
+              <input type="search" id="txSearchInput" class="glass-input" data-i18n-placeholder="searchPlaceholder" placeholder="بحث في الوصف أو الملاحظات..." />
+              <select id="txTypeFilter" class="glass-input">
+                <option value="all" data-i18n="filterAllTypes">كل الأنواع</option>
+                <option value="expense" data-i18n="expensesOnly">المصروفات فقط</option>
+                <option value="income" data-i18n="incomeOnly">الدخل فقط</option>
+              </select>
+              <select id="txCategoryFilter" class="glass-input"></select>
+              <select id="txMonthFilter" class="glass-input"></select>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="classical-table">
+              <thead>
+                <tr>
+                  <th data-i18n="colDate">التاريخ</th>
+                  <th data-i18n="colDescription">الوصف</th>
+                  <th data-i18n="colCategory">الفئة</th>
+                  <th data-i18n="colType">النوع</th>
+                  <th data-i18n="colAmount">المبلغ</th>
+                  <th data-i18n="colAction">إجراء</th>
+                </tr>
+              </thead>
+              <tbody id="transactionsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: BUDGETS -->
+      <section id="tab-budgets" class="tab-view">
+        <div class="glass-panel card-block">
+          <div class="section-head-row wrap-row">
+            <div>
+              <h2 class="classical-heading" data-i18n="budgetPlannerTitle">مخطط الميزانية الشهرية</h2>
+              <p class="section-desc" data-i18n="budgetPlannerDesc">حدد السقف الشهري لكل فئة بالعملة المختارة حالياً. يمكنك إضافة أو تعديل الفئات من تبويب التخصيص.</p>
+              <span class="gold-line"></span>
+            </div>
+            <button type="button" class="btn-glass-secondary" data-jump-tab="customize" data-i18n="customCatsTitle">إدارة الفئات</button>
+          </div>
+          <div id="budgetsGrid" class="budgets-grid"></div>
+        </div>
+      </section>
+
+      <!-- TAB 4: SAVINGS GOALS -->
+      <section id="tab-savings" class="tab-view">
+        <div class="glass-panel card-block mb-gap">
+          <div class="section-head">
+            <h2 class="classical-heading" data-i18n="newGoalTitle">إضافة هدف ادخار جديد</h2>
+            <span class="gold-line"></span>
+          </div>
+          <form id="newGoalForm" class="inline-goal-form">
+            <div class="field-group">
+              <label for="goalNameInput" data-i18n="goalName">اسم الهدف</label>
+              <input type="text" id="goalNameInput" required data-i18n-placeholder="goalPlaceholder" placeholder="مثال: صندوق الطوارئ، جهاز لوحي..." />
+            </div>
+            <div class="field-group">
+              <label for="goalTargetInput" data-i18n="targetAmount">المبلغ المستهدف</label>
+              <input type="number" id="goalTargetInput" step="any" min="1" required placeholder="1000" />
+            </div>
+            <div class="field-group">
+              <label for="goalInitialInput" data-i18n="initialSaved">الرصيد الابتدائي</label>
+              <input type="number" id="goalInitialInput" step="any" min="0" value="0" />
+            </div>
+            <button type="submit" class="btn-classical-primary" data-i18n="createGoalBtn">إنشاء الهدف</button>
+          </form>
+        </div>
+
+        <div id="savingsGoalsGrid" class="goals-grid"></div>
+      </section>
+
+      <!-- TAB 5: CUSTOMIZABLE INCOME SPLIT RULE -->
+      <section id="tab-rule503020" class="tab-view">
+        <div class="glass-panel card-block">
+          <div class="section-head">
+            <h2 class="classical-heading" data-i18n="ruleTitle">تحليل قاعدة تقسيم الدخل</h2>
+            <p class="section-desc" data-i18n="ruleSubtitle">قارن توزيع دخلك الفعلي مع نسبتك المخصصة للاحتياجات والرغبات والادخار، وعدّل النسب كما يناسب نمط حياتك.</p>
+            <span class="gold-line"></span>
+          </div>
+
+          <!-- Editable Split Ratios Bar -->
+          <div class="rule-editor-box">
+            <div class="rule-presets-row">
+              <span class="rule-editor-label" data-i18n="ruleCustomizeLabel">تخصيص النسب (%):</span>
+              <div id="rulePresetsBar" class="chip-row"></div>
+            </div>
+            <form id="ruleSplitForm" class="rule-split-form">
+              <div class="field-group">
+                <label for="ruleNeedsInput" data-i18n="ruleNeedsLabel">الاحتياجات %</label>
+                <input type="number" id="ruleNeedsInput" min="0" max="100" step="1" required />
+              </div>
+              <div class="field-group">
+                <label for="ruleWantsInput" data-i18n="ruleWantsLabel">الرغبات %</label>
+                <input type="number" id="ruleWantsInput" min="0" max="100" step="1" required />
+              </div>
+              <div class="field-group">
+                <label for="ruleSavingsInput" data-i18n="ruleSavingsLabel">الادخار %</label>
+                <input type="number" id="ruleSavingsInput" min="0" max="100" step="1" required />
+              </div>
+              <div class="rule-apply-wrap">
+                <span id="ruleSumBadge" class="cat-pill classical-num">100%</span>
+                <button type="submit" class="btn-classical-primary" data-i18n="ruleApplyBtn">تطبيق النسب</button>
+              </div>
+            </form>
+          </div>
+
+          <div id="rule503020Container" class="rule-grid"></div>
+        </div>
+      </section>
+
+      <!-- TAB 6: CUSTOMIZE & SETTINGS STUDIO -->
+      <section id="tab-customize" class="tab-view">
+        <div class="customize-grid">
+          <!-- Card 1: Brand Identity & Theme Accent -->
+          <div class="glass-panel card-block">
+            <div class="section-head">
+              <h2 class="classical-heading" data-i18n="customBrandTitle">هوية التطبيق والمظهر</h2>
+              <p class="section-desc" data-i18n="customBrandDesc">عدّل اسم التطبيق، الشعار المختصر، العنوان الفرعي، اللون الرئيسي، وكثافة العرض.</p>
+              <span class="gold-line"></span>
+            </div>
+            <form id="brandForm" class="glass-form">
+              <div class="form-row">
+                <div class="field-group">
+                  <label for="brandNameInput" data-i18n="brandNameLabel">اسم التطبيق</label>
+                  <input type="text" id="brandNameInput" maxlength="28" required />
+                </div>
+                <div class="field-group">
+                  <label for="brandEmblemInput" data-i18n="brandEmblemLabel">أحرف الشعار (1-3 أحرف)</label>
+                  <input type="text" id="brandEmblemInput" maxlength="3" required />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="field-group">
+                  <label for="brandSubArInput" data-i18n="brandSubArLabel">العنوان الفرعي (عربي)</label>
+                  <input type="text" id="brandSubArInput" maxlength="50" />
+                </div>
+                <div class="field-group">
+                  <label for="brandSubEnInput" data-i18n="brandSubEnLabel">العنوان الفرعي (إنجليزي)</label>
+                  <input type="text" id="brandSubEnInput" maxlength="50" />
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label data-i18n="accentColorLabel">لون التمييز الرئيسي</label>
+                <div class="accent-picker-row">
+                  <div id="accentSwatches" class="swatch-list"></div>
+                  <label class="custom-color-pill">
+                    <span data-i18n="customColorLabel">لون مخصص</span>
+                    <input type="color" id="customAccentPicker" value="#b88e3c" />
+                  </label>
+                </div>
+              </div>
+
+              <label class="toggle-row">
+                <input type="checkbox" id="compactModeToggle" />
+                <span data-i18n="compactModeLabel">الوضع المضغوط (مناسب لشاشات الهاتف)</span>
+              </label>
+
+              <button type="submit" class="btn-classical-primary" data-i18n="saveBrandBtn">حفظ الهوية والمظهر</button>
+            </form>
+          </div>
+
+          <!-- Card 2: Dashboard Layout & Thresholds -->
+          <div class="glass-panel card-block">
+            <div class="section-head">
+              <h2 class="classical-heading" data-i18n="customLayoutTitle">تخصيص لوحة التحكم والحدود</h2>
+              <p class="section-desc" data-i18n="customLayoutDesc">تحكم بالأقسام الظاهرة في لوحة التحكم، نسبة التحذير في الميزانية، وعدد العناصر المعروضة.</p>
+              <span class="gold-line"></span>
+            </div>
+            <form id="layoutForm" class="glass-form">
+              <div class="toggles-stack">
+                <label class="toggle-row">
+                  <input type="checkbox" id="toggleWidgetKpi" />
+                  <span data-i18n="widgetKpi">بطاقات المؤشرات الرئيسية (KPI)</span>
+                </label>
+                <label class="toggle-row">
+                  <input type="checkbox" id="toggleWidgetQuickAdd" />
+                  <span data-i18n="widgetQuickAdd">نموذج المعاملة السريعة</span>
+                </label>
+                <label class="toggle-row">
+                  <input type="checkbox" id="toggleWidgetDonut" />
+                  <span data-i18n="widgetDonut">مخطط توزيع المصروفات</span>
+                </label>
+                <label class="toggle-row">
+                  <input type="checkbox" id="toggleWidgetRecent" />
+                  <span data-i18n="widgetRecent">قائمة أحدث المعاملات</span>
+                </label>
+                <label class="toggle-row">
+                  <input type="checkbox" id="toggleWidgetBudgetWatch" />
+                  <span data-i18n="widgetBudgetWatch">مراقبة الميزانية</span>
+                </label>
+              </div>
+
+              <div class="form-row-3">
+                <div class="field-group">
+                  <label for="warnThresholdInput" data-i18n="warnThresholdLabel">نسبة التحذير (%)</label>
+                  <input type="number" id="warnThresholdInput" min="30" max="99" step="1" required />
+                </div>
+                <div class="field-group">
+                  <label for="recentCountInput" data-i18n="recentCountLabel">أحدث المعاملات</label>
+                  <input type="number" id="recentCountInput" min="1" max="20" step="1" required />
+                </div>
+                <div class="field-group">
+                  <label for="budgetWatchCountInput" data-i18n="budgetWatchCountLabel">مراقبة الميزانية</label>
+                  <input type="number" id="budgetWatchCountInput" min="1" max="12" step="1" required />
+                </div>
+              </div>
+
+              <button type="submit" class="btn-classical-primary" data-i18n="saveLayoutBtn">حفظ تخطيط اللوحة</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Card 3: Full Categories Manager -->
+        <div class="glass-panel card-block">
+          <div class="section-head">
+            <h2 class="classical-heading" data-i18n="customCatsTitle">إدارة الفئات</h2>
+            <p class="section-desc" data-i18n="customCatsDesc">أضف فئات جديدة للمصروفات أو الدخل، أو عدّل اسم ولون وأيقونة وتصنيف أي فئة حالية.</p>
+            <span class="gold-line"></span>
+          </div>
+
+          <form id="addCategoryForm" class="cat-add-form">
+            <div class="field-group">
+              <label for="newCatNameAr" data-i18n="catNameArLabel">الاسم بالعربية</label>
+              <input type="text" id="newCatNameAr" required placeholder="مثال: اشتراكات" />
+            </div>
+            <div class="field-group">
+              <label for="newCatNameEn" data-i18n="catNameEnLabel">الاسم بالإنجليزية</label>
+              <input type="text" id="newCatNameEn" required placeholder="e.g. Subscriptions" />
+            </div>
+            <div class="field-group">
+              <label for="newCatIcon" data-i18n="catIconLabel">الأيقونة</label>
+              <input type="text" id="newCatIcon" maxlength="4" value="📌" />
+            </div>
+            <div class="field-group">
+              <label for="newCatColor" data-i18n="catColorLabel">اللون</label>
+              <input type="color" id="newCatColor" value="#23487a" class="color-input-box" />
+            </div>
+            <div class="field-group">
+              <label for="newCatType" data-i18n="catTypeLabel">النوع</label>
+              <select id="newCatType">
+                <option value="expense" data-i18n="expense">مصروف</option>
+                <option value="income" data-i18n="income">دخل</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label for="newCatBucket" data-i18n="catBucketLabel">التصنيف</label>
+              <select id="newCatBucket">
+                <option value="needs" data-i18n="bucketNeeds">احتياجات أساسية</option>
+                <option value="wants" data-i18n="bucketWants">رغبات ونمط حياة</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-classical-primary" data-i18n="addCatBtn">إضافة الفئة</button>
+          </form>
+
+          <div id="categoriesManageList" class="manage-cats-grid"></div>
+        </div>
+
+        <!-- Card 4: Currencies & Data Management -->
+        <div class="customize-grid">
+          <div class="glass-panel card-block">
+            <div class="section-head-row wrap-row">
+              <div>
+                <h2 class="classical-heading" data-i18n="customCurrTitle">العملات وأسعار الصرف</h2>
+                <p class="section-desc" data-i18n="customCurrDesc">عدّل أسعار الصرف أو أضف عملة جديدة مخصصة لاستخدامها في كامل التطبيق.</p>
+                <span class="gold-line"></span>
+              </div>
+              <button type="button" id="customizeOpenRatesBtn" class="btn-glass-secondary" data-i18n="openRatesBtn">تعديل أسعار الصرف</button>
+            </div>
+
+            <form id="addCurrencyForm" class="glass-form">
+              <div class="form-row-3">
+                <div class="field-group">
+                  <label for="newCurrCode" data-i18n="currCodeLabel">رمز العملة</label>
+                  <input type="text" id="newCurrCode" maxlength="4" placeholder="JOD" required />
+                </div>
+                <div class="field-group">
+                  <label for="newCurrSymbol" data-i18n="currSymbolLabel">الرمز المختصر</label>
+                  <input type="text" id="newCurrSymbol" maxlength="6" placeholder="د.أ" required />
+                </div>
+                <div class="field-group">
+                  <label for="newCurrName" data-i18n="currNameLabel">اسم العملة</label>
+                  <input type="text" id="newCurrName" maxlength="24" placeholder="دينار أردني" required />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="field-group">
+                  <label for="newCurrRate" data-i18n="currRateLabel">سعر الصرف مقابل 1 USD</label>
+                  <input type="number" id="newCurrRate" step="any" min="0.0001" placeholder="0.71" required />
+                </div>
+                <div class="field-group">
+                  <label for="newCurrDecimals" data-i18n="currDecimalsLabel">الخانات العشرية</label>
+                  <select id="newCurrDecimals">
+                    <option value="2">2</option>
+                    <option value="0">0</option>
+                    <option value="3">3</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" class="btn-classical-primary" data-i18n="addCurrencyBtn">إضافة العملة</button>
+            </form>
+
+            <div id="customCurrenciesList" class="chip-row mt-sm"></div>
+          </div>
+
+          <div class="glass-panel card-block">
+            <div class="section-head">
+              <h2 class="classical-heading" data-i18n="customDataTitle">النسخ الاحتياطي وإدارة البيانات</h2>
+              <p class="section-desc" data-i18n="backupDesc">احفظ نسخة احتياطية من بياناتك وإعداداتك بصيغة JSON أو صدّر معاملاتك إلى CSV.</p>
+              <span class="gold-line"></span>
+            </div>
+            <div class="data-actions-stack">
+              <button type="button" class="btn-classical-primary" data-data-action="exportJson" data-i18n="exportJson">تصدير نسخة JSON</button>
+              <button type="button" class="btn-glass-secondary" data-data-action="exportCsv" data-i18n="exportCsv">تصدير جدول CSV</button>
+              <label class="btn-glass-secondary file-upload-label">
+                <span data-i18n="importJson">استيراد ملف JSON</span>
+                <input type="file" class="import-json-trigger" accept=".json" hidden />
+              </label>
+              <button type="button" class="btn-danger-glass" data-data-action="clearLedger" data-i18n="clearLedger">مسح المعاملات والبدء من الصفر</button>
+              <button type="button" class="btn-danger-glass" data-data-action="resetDemo" data-i18n="resetDemo">إعادة ضبط البيانات التجريبية</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: Edit Transaction -->
+  <div id="editTxModal" class="glass-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-panel modal-card">
+      <div class="section-head-row">
+        <h3 class="classical-heading" data-i18n="editTxTitle">تعديل المعاملة</h3>
+        <button type="button" class="icon-btn-subtle close-modal" data-close-modal="editTxModal">✕</button>
+      </div>
+      <form id="editTxForm" class="glass-form">
+        <input type="hidden" id="editTxId" />
+        <div class="form-row">
+          <div class="field-group">
+            <label for="editTxType" data-i18n="colType">النوع</label>
+            <select id="editTxType">
+              <option value="expense" data-i18n="expense">مصروف</option>
+              <option value="income" data-i18n="income">دخل</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="editTxDate" data-i18n="date">التاريخ</label>
+            <input type="date" id="editTxDate" required />
+          </div>
+        </div>
+        <div class="field-group">
+          <label for="editTxTitle" data-i18n="description">الوصف</label>
+          <input type="text" id="editTxTitle" required />
+        </div>
+        <div class="form-row">
+          <div class="field-group">
+            <label for="editTxAmount" id="editTxAmountLabel" data-i18n="amount">المبلغ</label>
+            <input type="number" id="editTxAmount" step="any" min="0.01" required />
+          </div>
+          <div class="field-group">
+            <label for="editTxCategory" data-i18n="category">الفئة</label>
+            <select id="editTxCategory"></select>
+          </div>
+        </div>
+        <div class="field-group">
+          <label for="editTxNote" data-i18n="noteLabel">ملاحظة (اختياري)</label>
+          <input type="text" id="editTxNote" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-glass-secondary" data-close-modal="editTxModal" data-i18n="cancelBtn">إلغاء</button>
+          <button type="submit" class="btn-classical-primary" data-i18n="saveChangesBtn">حفظ التعديلات</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Edit Savings Goal -->
+  <div id="editGoalModal" class="glass-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-panel modal-card">
+      <div class="section-head-row">
+        <h3 class="classical-heading" data-i18n="editGoalTitle">تعديل هدف الادخار</h3>
+        <button type="button" class="icon-btn-subtle close-modal" data-close-modal="editGoalModal">✕</button>
+      </div>
+      <form id="editGoalForm" class="glass-form">
+        <input type="hidden" id="editGoalId" />
+        <div class="field-group">
+          <label for="editGoalName" data-i18n="goalName">اسم الهدف</label>
+          <input type="text" id="editGoalName" required />
+        </div>
+        <div class="form-row">
+          <div class="field-group">
+            <label for="editGoalTarget" id="editGoalTargetLabel" data-i18n="targetAmount">المبلغ المستهدف</label>
+            <input type="number" id="editGoalTarget" step="any" min="1" required />
+          </div>
+          <div class="field-group">
+            <label for="editGoalSaved" id="editGoalSavedLabel" data-i18n="currentSavedLabel">المبلغ المدخر حالياً</label>
+            <input type="number" id="editGoalSaved" step="any" min="0" required />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-glass-secondary" data-close-modal="editGoalModal" data-i18n="cancelBtn">إلغاء</button>
+          <button type="submit" class="btn-classical-primary" data-i18n="saveChangesBtn">حفظ التعديلات</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Edit Category -->
+  <div id="editCatModal" class="glass-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-panel modal-card">
+      <div class="section-head-row">
+        <h3 class="classical-heading" data-i18n="editCategoryTitle">تعديل الفئة</h3>
+        <button type="button" class="icon-btn-subtle close-modal" data-close-modal="editCatModal">✕</button>
+      </div>
+      <form id="editCatForm" class="glass-form">
+        <input type="hidden" id="editCatId" />
+        <div class="form-row">
+          <div class="field-group">
+            <label for="editCatNameAr" data-i18n="catNameArLabel">الاسم بالعربية</label>
+            <input type="text" id="editCatNameAr" required />
+          </div>
+          <div class="field-group">
+            <label for="editCatNameEn" data-i18n="catNameEnLabel">الاسم بالإنجليزية</label>
+            <input type="text" id="editCatNameEn" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field-group">
+            <label for="editCatIcon" data-i18n="catIconLabel">الأيقونة</label>
+            <input type="text" id="editCatIcon" maxlength="4" />
+          </div>
+          <div class="field-group">
+            <label for="editCatColor" data-i18n="catColorLabel">اللون</label>
+            <input type="color" id="editCatColor" class="color-input-box" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field-group">
+            <label for="editCatType" data-i18n="catTypeLabel">النوع</label>
+            <select id="editCatType">
+              <option value="expense" data-i18n="expense">مصروف</option>
+              <option value="income" data-i18n="income">دخل</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="editCatBucket" data-i18n="catBucketLabel">التصنيف</label>
+            <select id="editCatBucket">
+              <option value="needs" data-i18n="bucketNeeds">احتياجات أساسية</option>
+              <option value="wants" data-i18n="bucketWants">رغبات ونمط حياة</option>
+              <option value="none" data-i18n="bucketNone">دخل (لا ينطبق)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-glass-secondary" data-close-modal="editCatModal" data-i18n="cancelBtn">إلغاء</button>
+          <button type="submit" class="btn-classical-primary" data-i18n="saveChangesBtn">حفظ التعديلات</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Exchange Rates Editor -->
+  <div id="rateModal" class="glass-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-panel modal-card">
+      <div class="section-head-row">
+        <h3 class="classical-heading" data-i18n="exchangeRatesTitle">أسعار الصرف مقابل الدولار الأمريكي (USD)</h3>
+        <button type="button" class="icon-btn-subtle close-modal" data-close-modal="rateModal">✕</button>
+      </div>
+      <p class="section-desc" data-i18n="exchangeRatesDesc">يمكنك تخصيص سعر صرف الدينار العراقي (IQD) أو أي عملة أخرى بما يناسب السعر الرسمي أو الموازي.</p>
+      <form id="exchangeRateForm" class="rates-form">
+        <div id="rateInputsList" class="rates-grid"></div>
+        <div class="modal-actions">
+          <button type="button" id="resetRatesBtn" class="btn-glass-secondary" data-i18n="resetDefaults">استعادة الافتراضي</button>
+          <button type="submit" class="btn-classical-primary" data-i18n="saveRates">حفظ الأسعار</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Backup & Restore -->
+  <div id="backupModal" class="glass-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-panel modal-card">
+      <div class="section-head-row">
+        <h3 class="classical-heading" data-i18n="backupTitle">النسخ الاحتياطي وإدارة البيانات</h3>
+        <button type="button" class="icon-btn-subtle close-modal" data-close-modal="backupModal">✕</button>
+      </div>
+      <p class="section-desc" data-i18n="backupDesc">احفظ نسخة احتياطية من بياناتك وإعداداتك بصيغة JSON أو صدّر معاملاتك إلى CSV.</p>
+      <div class="backup-actions">
+        <button type="button" class="btn-classical-primary" data-data-action="exportJson" data-i18n="exportJson">تصدير نسخة JSON</button>
+        <button type="button" class="btn-glass-secondary" data-data-action="exportCsv" data-i18n="exportCsv">تصدير جدول CSV</button>
+        <label class="btn-glass-secondary file-upload-label">
+          <span data-i18n="importJson">استيراد ملف JSON</span>
+          <input type="file" class="import-json-trigger" accept=".json" hidden />
+        </label>
+        <button type="button" class="btn-danger-glass" data-data-action="clearLedger" data-i18n="clearLedger">مسح المعاملات والبدء من الصفر</button>
+        <button type="button" class="btn-danger-glass" data-data-action="resetDemo" data-i18n="resetDemo">إعادة ضبط البيانات التجريبية</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Feedback -->
+  <div id="toastNotification" class="glass-toast hidden" role="status" aria-live="polite"></div>
+
+  <!-- Modular JavaScript Files (Ordered for Direct Browser & File Protocol Compatibility) -->
+  <script src="js/config.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/currency.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
